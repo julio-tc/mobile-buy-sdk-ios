@@ -127,10 +127,11 @@ extension Graph {
         /// task.resume()
         /// ````
         ///
-        public func queryGraphWith(_ query: Storefront.QueryRootQuery, cachePolicy: CachePolicy? = nil, retryHandler: RetryHandler<Storefront.QueryRoot>? = nil, completionHandler: @escaping QueryCompletion) -> Task {
+        public func queryGraphWith(_ query: Storefront.QueryRootQuery, cachePolicy: CachePolicy? = nil, param: String, retryHandler: RetryHandler<Storefront.QueryRoot>? = nil, completionHandler: @escaping QueryCompletion) -> Task {
             return self.graphRequestTask(
                 query:             query,
                 cachePolicy:       cachePolicy ?? self.cachePolicy,
+                param:             param,
                 retryHandler:      retryHandler,
                 completionHandler: completionHandler
             )
@@ -155,10 +156,11 @@ extension Graph {
         /// task.resume()
         /// ````
         ///
-        public func mutateGraphWith(_ mutation: Storefront.MutationQuery, retryHandler: RetryHandler<Storefront.Mutation>? = nil, completionHandler: @escaping MutationCompletion) -> Task {
+        public func mutateGraphWith(_ mutation: Storefront.MutationQuery, param: String, retryHandler: RetryHandler<Storefront.Mutation>? = nil, completionHandler: @escaping MutationCompletion) -> Task {
             return self.graphRequestTask(
                 query:             mutation,
                 cachePolicy:       .networkOnly,
+                param:             param,
                 retryHandler:      retryHandler,
                 completionHandler: completionHandler
             )
@@ -167,9 +169,9 @@ extension Graph {
         // ----------------------------------
         //  MARK: - Request Management -
         //
-        private func graphRequestTask<Q: GraphQL.AbstractQuery, R: GraphQL.AbstractResponse>(query: Q, cachePolicy: CachePolicy, retryHandler: RetryHandler<R>? = nil, completionHandler: @escaping (R?, QueryError?) -> Void) -> Task {
+        private func graphRequestTask<Q: GraphQL.AbstractQuery, R: GraphQL.AbstractResponse>(query: Q, cachePolicy: CachePolicy, param: String, retryHandler: RetryHandler<R>? = nil, completionHandler: @escaping (R?, QueryError?) -> Void) -> Task {
 
-            let request = self.graphRequestFor(query: query)
+            let request = self.graphRequestFor(query: query, param: param)
             return InternalTask<R>(
                 session:      self.session,
                 cache:        self.cache,
@@ -180,8 +182,13 @@ extension Graph {
             )
         }
 
-        func graphRequestFor(query: GraphQL.AbstractQuery) -> URLRequest {
-            var request     = URLRequest(url: self.apiURL)
+        func graphRequestFor(query: GraphQL.AbstractQuery, param: String) -> URLRequest {
+//            var request     = URLRequest(url: self.apiURL)
+
+            var urlComps = URLComponents(string: self.apiURL.absoluteString)
+            urlComps?.queryItems = [URLQueryItem(name: "type", value: param)]
+            var request     = URLRequest(url: urlComps!.url!)
+
             let requestData = String(describing: query).data(using: .utf8)!
 
             request.httpMethod              = "POST"
